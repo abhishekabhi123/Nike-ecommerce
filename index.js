@@ -15,7 +15,10 @@ app.use(morgan("dev"));
 app.use(express.json()); // Parse JSON request body
 
 const authRoutes = require("./src/routes/auth");
+const productRoutes = require("./src/routes/product");
+
 app.use("/api/auth", authRoutes);
+app.use("/api/products", productRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
