@@ -90,6 +90,16 @@ exports.updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
+    const validStatuses = [
+      "pending",
+      "shipped",
+      "delivered",
+      "paid",
+      "canceled",
+    ];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ message: "Invalid order status" });
+    }
     const order = await prisma.order.update({
       where: { id: parseInt(id) },
       data: { status },
