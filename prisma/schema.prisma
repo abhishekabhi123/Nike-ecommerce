@@ -23,6 +23,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   orders    Order[]
+  addresses Address[] 
 }
 
 model Category {
@@ -92,4 +93,19 @@ model orderItem {
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   quantity  Int
   price     Float
+}
+
+model Address {
+  int Int @id @default(autoincrement())
+  userId Int
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  addressLine1 String
+  addressLine2 String?
+  city String
+  state String
+  postalCode String
+  country String
+  phone String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

@@ -76,6 +76,7 @@ const categoryRoutes = require("./src/routes/category");
 const cartRoutes = require("./src/routes/cart");
 const orderRoutes = require("./src/routes/order");
 const userRoutes = require("./src/routes/user");
+const addressRoutes = require("./src/routes/address");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/products", authenticate, authorizeAdmin, productRoutes);
@@ -83,6 +84,7 @@ app.use("/api/categories", authenticate, authorizeAdmin, categoryRoutes);
 app.use("/api/cart", authenticate, cartRoutes);
 app.use("/api/orders", authenticate, orderRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/addresses", addressRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
