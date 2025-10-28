@@ -7,13 +7,14 @@ const helmet = require("helmet");
 const Stripe = require("stripe");
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const endpointSecret = process.env.STRIPE_ENDPOINT_SECRET;
+const prisma = require("./src/prismaClient");
 
 const app = express();
 
 app.post(
   "/api/webhook",
   express.raw({ type: "application/json" }),
-  (req, res) => {
+  async (req, res) => {
     const sig = req.headers["stripe-signature"];
     let event;
     try {
@@ -23,7 +24,23 @@ app.post(
       return res.status(400).send(`Webhook Error: ${error.message}`);
     }
     if (event.type === "payment.intent.succeeded") {
+      const paymentIntent = event.data.object;
+      const orderId = paymentIntent.metadata.orderId;
       console.log("PaymentIntent was successful!", event.data.object);
+      if (!orderId) {
+        console.error("No orderId found in payment intent metadata");
+        return res.status(400).send("No orderId in metadata");
+      }
+      try {
+        const updateOrder = await prisma.order.update({
+          where: { id: parseInt(orderId) },
+          data: { status: "paid" },
+        });
+        console.log("Order status updated to paid for orderId:", orderId);
+      } catch (error) {
+        console.error("Error updating order status:", error);
+        return res.status(500).send("Internal server error");
+      }
     }
     res.json({ received: true });
   }

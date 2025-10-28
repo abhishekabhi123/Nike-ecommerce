@@ -110,3 +110,25 @@ exports.updateOrderStatus = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+exports.cancelOrder = async (req, res) => {
+  const userId = req.user.userId;
+  const { orderId } = req.params;
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: parseInt(orderId) },
+    });
+
+    if (!order || order.userId !== userId || order.status === "pending") {
+      return res.status(404).json({ message: "Order cannot be canceled" });
+    }
+    await prisma.order.update({
+      where: { id: parseInt(orderId) },
+      data: { status: "canceled" },
+    });
+    res.json({ message: "Order canceled successfully" });
+  } catch (error) {
+    console.error("Error canceling order:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
