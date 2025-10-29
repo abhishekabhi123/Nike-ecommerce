@@ -33,9 +33,34 @@ exports.listProducts = async (req, res) => {
       limit = 10,
     } = req.query;
     const where = {};
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    if (category) {
+      where.category = { name: category };
+    }
+    if (minPrice || maxPrice) {
+      where.price = {};
+      if (minPrice) where.minPrice.gte = parseFloat(minPrice);
+      if (maxPrice) where.maxPrice.lte = parseFloat(maxPrice);
+    }
+    const orderBy = {};
+    if (sortBy) {
+      orderBy[sortBy] = sortOrder === "desc" ? "desc" : "asc";
+    } else {
+      orderBy.createdAt = "desc";
+    }
+    const skip = parseInt(page) - 1 * parseInt(limit);
+    const take = parseInt(limit);
     const products = await prisma.product.findMany({
-      include: { category: true },
-      orderBy: { createdAt: "desc" },
+      where,
+      orderBy,
+      take,
+      skip,
     });
     res.status(200).json(products);
   } catch (error) {
