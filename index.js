@@ -8,8 +8,16 @@ const Stripe = require("stripe");
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const endpointSecret = process.env.STRIPE_ENDPOINT_SECRET;
 const prisma = require("./src/prismaClient");
+const rateLimit = require("express-rate-limit");
 
 const app = express();
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: "Too many limits. Please try after some time",
+});
+
+app.use(limiter);
 
 app.post(
   "/api/webhook",

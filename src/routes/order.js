@@ -6,7 +6,7 @@ const {
   authenticate,
 } = require("../middlewares/authMiddleware");
 const handleValidationErrors = require("../middlewares/handleValidationErrors");
-const { validStatuses } = require("../validators/orderValidator");
+const { validateOrderStatus } = require("../validators/orderValidator");
 
 router.post("/", orderController.placeOrder);
 router.get("/mine", orderController.getMyOrders);
@@ -18,7 +18,7 @@ router.put(
   "/:orderId/status",
   authenticate,
   authorizeAdmin,
-  validStatuses,
+  ...validateOrderStatus,
   handleValidationErrors,
   orderController.updateOrderStatus
 );

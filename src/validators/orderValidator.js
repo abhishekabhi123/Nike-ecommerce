@@ -11,4 +11,4 @@ const validateOrderStatus = [
     .withMessage(`Status must be one of: ${validStatuses.join(", ")}`),
 ];
 
-module.exports = { validateOrderStatus, validStatuses };
+module.exports = { validateOrderStatus };

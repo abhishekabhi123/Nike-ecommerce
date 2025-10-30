@@ -1,4 +1,5 @@
 const prisma = require("../prismaClient");
+const { sendMail } = require("../utils/mailService");
 
 exports.placeOrder = async (req, res) => {
   try {
@@ -103,7 +104,12 @@ exports.updateOrderStatus = async (req, res) => {
     const order = await prisma.order.update({
       where: { id: parseInt(id) },
       data: { status },
+      include: { user: true },
     });
+    const userEmail = order.user.email;
+    const subject = `Your order ${id} status updated to ${status}`;
+    const html = `<p>Hi ${order.user.name}, </p> <p>Your order status is now ${status} `;
+    await sendMail(userEmail, subject, html);
     res.json({ message: "Order status updated", order });
   } catch (error) {
     console.error("Error updating order status:", error);
