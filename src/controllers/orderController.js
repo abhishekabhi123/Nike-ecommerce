@@ -10,18 +10,27 @@ exports.placeOrder = async (req, res) => {
         items: { include: { product: true } },
       },
     });
+
     if (!cart || cart.items.length === 0) {
       return res.status(400).json({ message: "Cart is empty" });
     }
+
     let total = 0;
+    // ✅ CHANGED: Include size and color from cart items
     let orderItemsData = cart.items.map((item) => {
-      total += item.product.price * item.quantity;
+      // Use discountPrice if available, otherwise regular price
+      const price = item.product.discountPrice || item.product.price;
+      total += price * item.quantity;
+
       return {
         productId: item.productId,
         quantity: item.quantity,
-        price: item.product.price,
+        price: price,
+        size: item.size || null, // ✅ NEW: Transfer size from cart
+        color: item.color || null, // ✅ NEW: Transfer color from cart
       };
     });
+
     const order = await prisma.order.create({
       data: {
         userId,
@@ -31,11 +40,14 @@ exports.placeOrder = async (req, res) => {
           create: orderItemsData,
         },
       },
-      include: { items: true },
+      include: { items: { include: { product: true } } },
     });
+
+    // Clear cart after order is placed
     await prisma.cartItem.deleteMany({
       where: { cartId: cart.id },
     });
+
     res.status(201).json({ message: "Order placed successfully", order });
   } catch (error) {
     console.error("Error placing order:", error);
@@ -49,6 +61,7 @@ exports.getMyOrders = async (req, res) => {
     const orders = await prisma.order.findMany({
       where: { userId },
       include: { items: { include: { product: true } } },
+      orderBy: { createdAt: "desc" }, // ✅ ADDED: Show newest orders first
     });
     res.json(orders);
   } catch (error) {
@@ -65,9 +78,11 @@ exports.getOrderById = async (req, res) => {
       where: { id: parseInt(id) },
       include: { items: { include: { product: true } } },
     });
+
     if (!order || order.userId !== userId) {
       return res.status(404).json({ message: "Order not found" });
     }
+
     res.json(order);
   } catch (error) {
     console.error("Error fetching order by ID:", error);
@@ -78,7 +93,11 @@ exports.getOrderById = async (req, res) => {
 exports.getAllOrders = async (req, res) => {
   try {
     const orders = await prisma.order.findMany({
-      include: { user: true, items: { include: { product: true } } },
+      include: {
+        user: true,
+        items: { include: { product: true } },
+      },
+      orderBy: { createdAt: "desc" }, // ✅ ADDED: Show newest orders first
     });
     res.json(orders);
   } catch (error) {
@@ -93,23 +112,28 @@ exports.updateOrderStatus = async (req, res) => {
     const { status } = req.body;
     const validStatuses = [
       "pending",
+      "processing", // ✅ ADDED: Better status flow
       "shipped",
       "delivered",
-      "paid",
       "canceled",
     ];
+
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ message: "Invalid order status" });
     }
+
     const order = await prisma.order.update({
       where: { id: parseInt(id) },
       data: { status },
       include: { user: true },
     });
+
     const userEmail = order.user.email;
-    const subject = `Your order ${id} status updated to ${status}`;
-    const html = `<p>Hi ${order.user.name}, </p> <p>Your order status is now ${status} `;
+    const subject = `Your order #${id} status updated to ${status}`;
+    const html = `<p>Hi ${order.user.name},</p><p>Your order status is now <strong>${status}</strong>.</p>`;
+
     await sendMail(userEmail, subject, html);
+
     res.json({ message: "Order status updated", order });
   } catch (error) {
     console.error("Error updating order status:", error);
@@ -120,18 +144,30 @@ exports.updateOrderStatus = async (req, res) => {
 exports.cancelOrder = async (req, res) => {
   const userId = req.user.userId;
   const { orderId } = req.params;
+
   try {
     const order = await prisma.order.findUnique({
       where: { id: parseInt(orderId) },
     });
 
-    if (!order || order.userId !== userId || order.status === "pending") {
-      return res.status(404).json({ message: "Order cannot be canceled" });
+    // ✅ FIXED: Logic error - should allow canceling if status IS "pending"
+    if (!order || order.userId !== userId) {
+      return res.status(404).json({ message: "Order not found" });
     }
+
+    // Only allow canceling pending or processing orders
+    if (order.status !== "pending" && order.status !== "processing") {
+      return res.status(400).json({
+        message:
+          "Order cannot be canceled. It has already been shipped or delivered.",
+      });
+    }
+
     await prisma.order.update({
       where: { id: parseInt(orderId) },
       data: { status: "canceled" },
     });
+
     res.json({ message: "Order canceled successfully" });
   } catch (error) {
     console.error("Error canceling order:", error);

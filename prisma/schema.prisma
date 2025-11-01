@@ -36,22 +36,27 @@ model Category {
   createdAt   DateTime  @default(now())
 }
 
+// ✅ UPDATED: Product model with images, sizes, colors, stock, badge
 model Product {
   id            Int         @id @default(autoincrement())
   name          String
   slug          String      @unique
   description   String?
-  imageUrl      String?
+  imageUrl      String?     // Main product image
+  images        String[]    @default([])  // ✅ NEW: Additional images array
   price         Float
   discountPrice Float?
   categoryId    Int
   category      Category    @relation(fields: [categoryId], references: [id])
+  sizes         String[]    @default([])  // ✅ NEW: Available sizes ["7", "8", "9", "10"]
+  colors        Json?                     // ✅ NEW: Available colors with metadata
+  stock         Int         @default(0)   // ✅ NEW: Total stock quantity
+  badge         String?                   // ✅ NEW: "Just In", "Best Seller", "Sale"
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   cartItems     CartItem[]
   orderItems    orderItem[]
 }
-
 model Cart {
   id        Int        @id @default(autoincrement())
   userId    Int        @unique
@@ -68,11 +73,14 @@ model CartItem {
   productId Int
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   quantity  Int      @default(1)
+  size      String?  // ✅ NEW: Selected size
+  color     String?  // ✅ NEW: Selected color
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([cartId, productId])
+  @@unique([cartId, productId, size, color]) // ✅ UPDATED: Include size and color in unique constraint
 }
+
 
 model Order {
   id        Int         @id @default(autoincrement())
@@ -85,6 +93,7 @@ model Order {
   updatedAt DateTime    @updatedAt
 }
 
+// ✅ UPDATED: orderItem with size and color fields
 model orderItem {
   id        Int     @id @default(autoincrement())
   orderId   Int
@@ -93,10 +102,12 @@ model orderItem {
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   quantity  Int
   price     Float
+  size      String? // ✅ NEW: Purchased size
+  color     String? // ✅ NEW: Purchased color
 }
 
 model Address {
-  int          Int      @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   userId       Int
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   addressLine1 String
